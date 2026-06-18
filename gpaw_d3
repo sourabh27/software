@@ -1,0 +1,9 @@
+mkdir build   
+cd build/
+cmake .. -DCMAKE_Fortran_COMPILER=ifx -DCMAKE_C_COMPILER=icx
+cmake ../ --help
+echo $FC
+echo $CC
+cmake ..   -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX   -DCMAKE_Fortran_COMPILER=ifx  -DCMAKE_C_COMPILER=icx
+cmake --build . -j$(nproc)
+cmake --install .
