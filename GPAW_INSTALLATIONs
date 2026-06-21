@@ -1,0 +1,119 @@
+# GPAW Library Installation Guide
+
+This guide provides step-by-step instructions for building the required libraries for GPAW (Gaussian Projected Augmented Wave). These libraries are built with Intel oneAPI 2025.3 and MPI support.
+
+## Prerequisites
+
+- **Intel oneAPI 2025.3** (verified in paths)
+- **Intel MPI** (compatible with oneAPI)
+- **Linux** (Ubuntu 22.04 or CentOS 8+ recommended)
+- **GCC** (optional, Intel compilers preferred)
+- **Build environment**: `bash` and standard build tools
+
+## Installation Procedure
+
+Follow these steps **in order** to build all dependencies:
+
+### 1. FFTW3 (Foundation Library)
+
+```bash
+# Configure environment for FFTW3
+export FC="mpiifx -fc=ifx"
+export F77=$FC
+export CC="mpiicx -cc=icx"
+export CXX=icpx
+export MPICC="mpiicx -cc=icx"
+export CPP="icx -E"
+export FFLAGS="-O2 -xCORE-AVX512"
+export CFLAGS="-O2 -xCORE-AVX512"
+
+# Build FFTW3 with MPI and shared libraries
+./configure --prefix=/home/skumar1/Apps/LIBS/GPAW/fftw_build --enable-mpi --enable-shared
+
+# Configure environment for ELPA
+export FC=mpiifx
+export F90=$FC
+export CC=mpiicx
+export CXX=mpiicpx
+export CPP="icx -E"
+export FCFLAGS="-O2 -xCORE-AVX512 -fPIC -qopenmp"
+export CFLAGS="-O2 -xCORE-AVX512 -fPIC -qopenmp"
+export CXXFLAGS="-O2 -xCORE-AVX512 -fPIC -qopenmp"
+
+export SCALAPACK_FCFLAGS="-I/home/skumar1/intel/oneapi/mkl/2025.3/include"
+export SCALAPACK_LDFLAGS="-qmkl=cluster"
+
+# Build ELPA with shared libraries (disable MPI module)
+./configure --prefix=/home/skumar1/Apps/LIBS/GPAW/elpa_build --enable-shared --disable-mpi-module
+
+# Configure environment for LIBVDWXC (reuses FFTW3 settings)
+export FC="mpiifx -fc=ifx"
+export F77=$FC
+export CC="mpiicx -cc=icx"
+export CXX=icpx
+export MPICC="mpiicx -cc=icx"
+export CPP="icx -E"
+export FFLAGS="-O2 -xCORE-AVX512"
+export MPI_FCFLAGS=$FFLAGS
+export CFLAGS="-O2 -xCORE-AVX512"
+export MPI_CFLAGS=$CFLAGS
+export CXXFLAGS=$CFLAGS
+
+export LDFLAGS="-qmkl=cluster"
+export FFTW3_INCLUDES="-I/home/skumar1/Apps/LIBS/GPAW/fftw_build/include"
+export FFTW3_LIBS="-L/home/skumar1/Apps/LIBS/GPAW/fftw_build/lib -lfftw3 -lfftw3_mpi"
+
+# Build LIBVDWXC with MPI and shared libraries
+./configure --prefix=/home/skumar1/Apps/LIBS/GPAW/libvdwxc_build --with-mpi --enable-shared
+
+# Configure environment for LIBXC
+export FC=mpiifx
+export CC=mpiicx
+export CXX=mpiicpx
+export FCFLAGS="-O2 -xCORE-AVX2"
+export CFLAGS="-O2 -xCORE-AVX2"
+export LDFLAGS="-qmkl=cluster"
+
+# Build LIBXC with shared libraries and Fortran support
+./configure --prefix=/home/skumar1/Apps/LIBS/GPAW/libxc_build --enable-shared --enable-fortran
+
+
+# For GPAW siteconfig.py
+import os
+
+mpi = True
+compiler = 'mpiicx'
+scalapack = True
+fftw = True
+elpa = True
+# Disable LibXC
+libxc = True
+libvdwxc = True
+
+# MKL libraries
+libraries = [
+    'mkl_scalapack_lp64',
+    'mkl_blacs_intelmpi_lp64',
+    'mkl_intel_lp64',
+    'mkl_sequential',
+    'mkl_core',
+    'mpi',
+    'mkl_rt', 'xc', 'elpa', 'vdwxc'
+]
+
+library_dirs += [os.environ['MKLROOT'] + '/lib/']
+library_dirs += [os.environ['I_MPI_ROOT'] + '/lib/']
+library_dirs += ['/home/skumar1/Apps/LIBS/GPAW/libxc_build/lib']
+library_dirs += ['/home/skumar1/Apps/LIBS/GPAW/elpa_build/lib']
+library_dirs += ['/home/skumar1/Apps/LIBS/GPAW/fftw_build/lib']
+library_dirs += ['/home/skumar1/Apps/LIBS/GPAW/libvdwxc_build/lib']
+
+include_dirs += [os.environ['MKLROOT'] + '/include']
+include_dirs += [os.environ['I_MPI_ROOT'] + '/include']
+include_dirs += ['/home/skumar1/Apps/LIBS/GPAW/libxc_build/include']
+include_dirs += ['/home/skumar1/Apps/LIBS/GPAW/elpa_build/include/elpa-2025.01.002']
+include_dirs += ['/home/skumar1/Apps/LIBS/GPAW/fftw_build/include']
+include_dirs += ['/home/skumar1/Apps/LIBS/GPAW/libvdwxc_build/include']
+
+extra_compile_args = ['-O2', '-fPIC', '-qmkl=cluster', '-xCORE-AVX512']
+extra_link_args = ['-qopenmp']
